@@ -1,0 +1,5 @@
+{
+  "name": "V5 SOS Poster Meta Data Extractor",
+  "description": "Extract competition metadata from posters using Gemini AI.",
+  "requestFramePermissions": []
+}
