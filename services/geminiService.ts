@@ -2,17 +2,44 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { PosterMetadata } from "../types";
 
 // Helper function to initialize Gemini lazily
-// This prevents the "API Key must be set" error from crashing the app on initial load
 const getGeminiClient = () => {
-  // Check multiple common environment variable patterns to ensure compatibility with Vercel/Vite/CRA
-  // Note: For Vite apps on Vercel, use VITE_API_KEY in environment variables
-  const apiKey = process.env.API_KEY || 
+  let apiKey = '';
+
+  // 1. Try to get from Vite environment variables (Standard for Vercel + Vite)
+  // We use try-catch because accessing import.meta.env might fail in some non-module contexts
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      apiKey = import.meta.env.VITE_API_KEY || import.meta.env.API_KEY || '';
+    }
+  } catch (e) {
+    console.warn("Could not access import.meta.env");
+  }
+
+  // 2. Try to get from process.env (Standard for CRA / Node compatibility)
+  if (!apiKey) {
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        apiKey = process.env.API_KEY || 
                  process.env.VITE_API_KEY || 
-                 process.env.REACT_APP_API_KEY;
+                 process.env.REACT_APP_API_KEY || '';
+      }
+    } catch (e) {
+      console.warn("Could not access process.env");
+    }
+  }
+
+  // 3. Fallback: User provided key directly. 
+  // This ensures the app works immediately even if env vars are tricky to configure.
+  if (!apiKey) {
+    apiKey = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
+  }
 
   if (!apiKey) {
     throw new Error("API Key tidak ditemukan. Mohon set VITE_API_KEY di Environment Variables Vercel.");
   }
+  
   return new GoogleGenAI({ apiKey });
 };
 
