@@ -1,14 +1,11 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { PosterMetadata } from "../types";
 
-// HARDCODED KEY: Menggunakan key Anda secara langsung sebagai default utama
-// Ini menjamin aplikasi tidak akan crash karena masalah environment variable
-const DEFAULT_API_KEY = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
-
 const getGeminiClient = () => {
-  let apiKey = DEFAULT_API_KEY;
+  // 1. Coba baca dari process.env (Standard Node/CRA/Vercel System)
+  let apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY;
 
-  // Opsi tambahan: Coba baca dari Vite Env jika ada (untuk fleksibilitas di masa depan)
+  // 2. Coba baca dari Vite env vars (import.meta.env)
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
@@ -16,13 +13,16 @@ const getGeminiClient = () => {
       apiKey = import.meta.env.VITE_API_KEY;
     }
   } catch (e) {
-    // Abaikan error jika import.meta tidak tersedia, gunakan default key
+    // Ignore error if import.meta is not available
   }
 
-  // Double check (seharusnya tidak pernah kosong karena ada DEFAULT_API_KEY)
+  // 3. Fallback: Gunakan key yang Anda berikan jika Env Vars tidak terbaca di Vercel
   if (!apiKey) {
-    console.error("API Key kosong. Menggunakan fallback.");
-    apiKey = DEFAULT_API_KEY; 
+    apiKey = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
+  }
+
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please set VITE_API_KEY in Vercel Environment Variables.");
   }
   
   return new GoogleGenAI({ apiKey });
