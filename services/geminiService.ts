@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { PosterMetadata } from "../types";
 
 const getGeminiClient = () => {
@@ -18,20 +18,22 @@ const getGeminiClient = () => {
 
   // 3. Fallback: Gunakan key yang Anda berikan jika Env Vars tidak terbaca di Vercel
   if (!apiKey) {
+    // console.warn("Using fallback API Key");
     apiKey = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
   }
 
   if (!apiKey) {
-    throw new Error("API Key is missing. Please set VITE_API_KEY in Vercel Environment Variables.");
+    throw new Error("API Key is missing.");
   }
   
-  return new GoogleGenAI({ apiKey });
+  // Trim just in case of whitespace
+  return new GoogleGenAI({ apiKey: apiKey.trim() });
 };
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
 // Define the schema for structured output
-const metadataSchema: Schema = {
+const metadataSchema = {
   type: Type.OBJECT,
   properties: {
     competitionName: { type: Type.STRING, description: "Nama lengkap kompetisi." },

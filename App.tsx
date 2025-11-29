@@ -44,9 +44,16 @@ const App: React.FC = () => {
     try {
       const result = await extractPosterMetadata(file);
       setMetadata(result);
-    } catch (err) {
-      setError('Gagal menganalisis gambar. Pastikan API Key valid atau coba gambar lain.');
-      console.error(err);
+    } catch (err: any) {
+      console.error("Full API Error:", err);
+      // Extract meaningful error message
+      let msg = 'Gagal menganalisis gambar.';
+      if (err.message) {
+        if (err.message.includes('403')) msg += ' (Akses Ditolak/API Key Salah)';
+        else if (err.message.includes('429')) msg += ' (Quota Habis)';
+        else msg += ` Detail: ${err.message}`;
+      }
+      setError(msg);
     } finally {
       setIsAnalyzing(false);
     }
@@ -63,9 +70,9 @@ const App: React.FC = () => {
         ...prev,
         [key]: newValue
       }));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to refresh field', err);
-      alert('Gagal memperbarui data. Silakan coba lagi.');
+      alert(`Gagal update: ${err.message || 'Error tidak diketahui'}`);
     } finally {
       setLoadingField(null);
     }
@@ -148,7 +155,8 @@ const App: React.FC = () => {
             )}
             
             {error && (
-              <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 text-sm">
+              <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 text-sm break-words">
+                <p className="font-bold mb-1">Terjadi Kesalahan:</p>
                 {error}
               </div>
             )}
