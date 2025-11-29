@@ -1,32 +1,50 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { PosterMetadata } from "../types";
 
-const getGeminiClient = () => {
-  // 1. Coba baca dari process.env (Standard Node/CRA/Vercel System)
-  let apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY;
+const LOCAL_STORAGE_KEY = 'custom_gemini_api_key';
 
-  // 2. Coba baca dari Vite env vars (import.meta.env)
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+export const saveApiKey = (key: string) => {
+  if (key) {
+    localStorage.setItem(LOCAL_STORAGE_KEY, key.trim());
+  } else {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+  }
+};
+
+export const getSavedApiKey = () => {
+  return localStorage.getItem(LOCAL_STORAGE_KEY);
+};
+
+const getGeminiClient = () => {
+  // 1. Coba baca dari Local Storage (User Input Prioritas Utama)
+  let apiKey = getSavedApiKey();
+
+  // 2. Jika tidak ada custom key, coba baca dari Env Vars
+  if (!apiKey) {
+    // a. Standard Node/CRA/Vercel System
+    apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY;
+
+    // b. Vite env vars
+    try {
       // @ts-ignore
-      apiKey = import.meta.env.VITE_API_KEY;
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+        // @ts-ignore
+        apiKey = import.meta.env.VITE_API_KEY;
+      }
+    } catch (e) {
+      // Ignore
     }
-  } catch (e) {
-    // Ignore error if import.meta is not available
   }
 
-  // 3. Fallback: Gunakan key yang Anda berikan jika Env Vars tidak terbaca di Vercel
+  // 3. Fallback: Hardcoded Key (Hanya jika tidak ada di localStorage atau Env)
   if (!apiKey) {
-    // console.warn("Using fallback API Key");
     apiKey = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
   }
-
+  
   if (!apiKey) {
     throw new Error("API Key is missing.");
   }
   
-  // Trim just in case of whitespace
   return new GoogleGenAI({ apiKey: apiKey.trim() });
 };
 
@@ -63,7 +81,6 @@ const fileToGenerativePart = async (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
       const base64Data = base64String.split(',')[1];
       resolve(base64Data);
     };
@@ -117,7 +134,6 @@ export const extractPosterMetadata = async (file: File): Promise<PosterMetadata>
 export const reanalyzeField = async (file: File, fieldLabel: string, currentVal: string): Promise<string> => {
   const base64Data = await fileToGenerativePart(file);
 
-  // Add specific instructions based on the field label logic
   let specificInstruction = "";
   const labelLower = fieldLabel.toLowerCase();
   
