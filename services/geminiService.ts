@@ -1,43 +1,28 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { PosterMetadata } from "../types";
 
-// Helper function to initialize Gemini lazily
-const getGeminiClient = () => {
-  let apiKey = '';
+// HARDCODED KEY: Menggunakan key Anda secara langsung sebagai default utama
+// Ini menjamin aplikasi tidak akan crash karena masalah environment variable
+const DEFAULT_API_KEY = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
 
-  // 1. Try to get from Vite environment variables (Standard for Vercel + Vite)
-  // We use try-catch because accessing import.meta.env might fail in some non-module contexts
+const getGeminiClient = () => {
+  let apiKey = DEFAULT_API_KEY;
+
+  // Opsi tambahan: Coba baca dari Vite Env jika ada (untuk fleksibilitas di masa depan)
   try {
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
       // @ts-ignore
-      apiKey = import.meta.env.VITE_API_KEY || import.meta.env.API_KEY || '';
+      apiKey = import.meta.env.VITE_API_KEY;
     }
   } catch (e) {
-    console.warn("Could not access import.meta.env");
+    // Abaikan error jika import.meta tidak tersedia, gunakan default key
   }
 
-  // 2. Try to get from process.env (Standard for CRA / Node compatibility)
+  // Double check (seharusnya tidak pernah kosong karena ada DEFAULT_API_KEY)
   if (!apiKey) {
-    try {
-      if (typeof process !== 'undefined' && process.env) {
-        apiKey = process.env.API_KEY || 
-                 process.env.VITE_API_KEY || 
-                 process.env.REACT_APP_API_KEY || '';
-      }
-    } catch (e) {
-      console.warn("Could not access process.env");
-    }
-  }
-
-  // 3. Fallback: User provided key directly. 
-  // This ensures the app works immediately even if env vars are tricky to configure.
-  if (!apiKey) {
-    apiKey = 'AIzaSyDW0gQvv3zEFWXxjBUnMjPwjgIdPICTGQY';
-  }
-
-  if (!apiKey) {
-    throw new Error("API Key tidak ditemukan. Mohon set VITE_API_KEY di Environment Variables Vercel.");
+    console.error("API Key kosong. Menggunakan fallback.");
+    apiKey = DEFAULT_API_KEY; 
   }
   
   return new GoogleGenAI({ apiKey });
@@ -92,7 +77,7 @@ export const extractPosterMetadata = async (file: File): Promise<PosterMetadata>
   const base64Data = await fileToGenerativePart(file);
 
   try {
-    const ai = getGeminiClient(); // Initialize here
+    const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
@@ -145,7 +130,7 @@ export const reanalyzeField = async (file: File, fieldLabel: string, currentVal:
   }
 
   try {
-    const ai = getGeminiClient(); // Initialize here
+    const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
