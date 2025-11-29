@@ -13,16 +13,16 @@ const metadataSchema: Schema = {
   properties: {
     competitionName: { type: Type.STRING, description: "Nama lengkap kompetisi." },
     field: { type: Type.STRING, description: "Bidang atau kategori lomba (misal: Desain, Pemrograman, Fotografi)." },
-    deadline: { type: Type.STRING, description: "Tanggal batas akhir pendaftaran. Jika ada beberapa gelombang, ambil tanggal yang PALING TERAKHIR." },
+    deadline: { type: Type.STRING, description: "Tanggal batas akhir pendaftaran. ATURAN: Jika ada beberapa gelombang (batch), ambil tanggal 'Batch Terakhir' atau tanggal penutupan paling akhir." },
     deadlineISO: { type: Type.STRING, description: "Tanggal deadline dalam format YYYYMMDD (contoh: 20241231). Kosongkan jika tidak ada." },
-    executionDate: { type: Type.STRING, description: "Tanggal pelaksanaan babak penyisihan atau seleksi yang PALING AWAL. Output harus berupa 1 tanggal spesifik saja." },
-    executionDateISO: { type: Type.STRING, description: "Tanggal pelaksanaan dalam format YYYYMMDD (contoh: 20241231). Kosongkan jika tidak ada." },
-    cost: { type: Type.STRING, description: "Biaya pendaftaran TERTINGGI khusus untuk kategori siswa SMP/SMA. Output harus berupa 1 nominal biaya saja." },
+    executionDate: { type: Type.STRING, description: "Tanggal pelaksanaan lomba. ATURAN: Jika ada rangkaian acara (penyisihan, semifinal, final), ambil tanggal dimulainya BABAK PERTAMA/PENYISIHAN/SELEKSI AWAL saja. Output berupa 1 tanggal atau rentang tanggal awal." },
+    executionDateISO: { type: Type.STRING, description: "Tanggal pelaksanaan awal dalam format YYYYMMDD (contoh: 20241231). Kosongkan jika tidak ada." },
+    cost: { type: Type.STRING, description: "Biaya pendaftaran. ATURAN: Cari biaya untuk kategori SISWA SMP/SMA. Jika ada rentang harga (early bird vs normal), ambil harga TERTINGGI/NORMAL. Output berupa nominal rupiah (contoh: Rp 50.000)." },
     type: { type: Type.STRING, description: "Jenis kepesertaan: 'Individu', 'Kelompok', atau 'Individu/Kelompok'." },
     status: { type: Type.STRING, description: "Status pelaksanaan: 'Daring' (Online) atau 'Luring' (Offline/Onsite)." },
     location: { type: Type.STRING, description: "Nama Kota jika Luring, atau 'Daring' jika online." },
-    broadcastMessage: { type: Type.STRING, description: "Buatkan pesan broadcast WhatsApp yang SANGAT MENARIK, rapi, dan persuasif untuk disebar di grup chat. WAJIB GUNAKAN BANYAK EMOJI yang relevan di judul dan poin-poin. Struktur: 1. Headline Bombastis/Hype 🔥 2. Detail singkat (Nama Lomba, Kategori, Deadline, Biaya) dengan bullet points 3. Benefit singkat 4. Call to Action (Link Pendaftaran) yang jelas. Buat agar orang antusias mendaftar." },
-    link: { type: Type.STRING, description: "Link pendaftaran, link guidebook, atau link website/sosmed yang tertera." },
+    broadcastMessage: { type: Type.STRING, description: "Buatkan caption/pesan broadcast untuk WhatsApp/Telegram yang SANGAT MENARIK dan PERSUASIF. Gunakan style bahasa anak muda/pelajar yang 'Hype'. \n\nStruktur Wajib:\n1. Headline Bombastis dengan Emoji Api/Sirene 🚨🔥\n2. Paragraf pembuka singkat mengajak ikut.\n3. Detail Event pakai Bullet Points Emoji (📅 Deadline, 📍 Lokasi, 💰 Biaya).\n4. Benefit/Hadiah singkat 🏆.\n5. Call to Action (CTA) tegas untuk klik link 👇.\n\nPastikan banyak menggunakan emoji yang relevan di setiap baris." },
+    link: { type: Type.STRING, description: "Link pendaftaran, link guidebook (bit.ly/linktree), atau link website yang tertera." },
   },
   required: [
     "competitionName", "field", "deadline", "executionDate", "cost", 
@@ -65,7 +65,7 @@ export const extractPosterMetadata = async (file: File): Promise<PosterMetadata>
             },
           },
           {
-            text: "Analisis poster ini dan ekstrak informasi berikut ke dalam format JSON. Jika informasi tidak ditemukan secara eksplisit, simpulkan dengan masuk akal atau tulis 'Tidak tertera'.",
+            text: "Analisis poster kompetisi ini secara mendalam. Ekstrak informasi spesifik sesuai schema. Hati-hati dengan tanggal tahun (pastikan tahun terbaru/sesuai poster) dan biaya (ambil kategori siswa/umum yang relevan).",
           },
         ],
       },
@@ -96,13 +96,13 @@ export const reanalyzeField = async (file: File, fieldLabel: string, currentVal:
   const labelLower = fieldLabel.toLowerCase();
   
   if (labelLower.includes("biaya")) {
-    specificInstruction = "Ambil biaya tertinggi khusus untuk siswa SMP/SMA. Output 1 nominal saja.";
+    specificInstruction = "Fokus cari biaya untuk siswa SMP/SMA. Jika ada Early Bird dan Normal, ambil harga NORMAL (Tertinggi). Hanya tulis nominalnya.";
   } else if (labelLower.includes("pelaksanaan")) {
-    specificInstruction = "Ambil tanggal pelaksanaan babak penyisihan/seleksi paling awal. Output 1 tanggal saja.";
+    specificInstruction = "Cari tanggal dimulainya babak penyisihan atau seleksi paling awal. Jangan tanggal final. Hanya tulis tanggalnya.";
   } else if (labelLower.includes("deadline")) {
-    specificInstruction = "Ambil tanggal terakhir pendaftaran.";
+    specificInstruction = "Cari tanggal penutupan pendaftaran PALING TERAKHIR (Batch terakhir). Hanya tulis tanggalnya.";
   } else if (labelLower.includes("broadcast") || labelLower.includes("pesan")) {
-    specificInstruction = "Buatkan pesan broadcast WhatsApp yang menarik, penuh emoji, rapi, dan hype. Sertakan headline, detail penting, dan ajakan mendaftar.";
+    specificInstruction = "Buat ulang pesan broadcast yang lebih menarik, hype, dan penuh emoji. Sertakan Headline, Poin-poin penting, dan Link.";
   }
 
   try {
@@ -117,10 +117,10 @@ export const reanalyzeField = async (file: File, fieldLabel: string, currentVal:
             },
           },
           {
-            text: `Perbaiki atau ekstrak ulang data untuk kolom: "${fieldLabel}". 
+            text: `Perbaiki data untuk kolom: "${fieldLabel}". 
             Instruksi Khusus: ${specificInstruction}
-            Nilai sebelumnya yang mungkin salah adalah: "${currentVal}".
-            Berikan HANYA jawaban teks singkat yang benar dan akurat untuk kolom tersebut berdasarkan gambar. Jangan gunakan markdown atau JSON.`,
+            Data sebelumnya: "${currentVal}".
+            Berikan HANYA teks jawaban yang benar tanpa markdown.`,
           },
         ],
       },
