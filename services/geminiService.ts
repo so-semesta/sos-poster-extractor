@@ -1,9 +1,20 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { PosterMetadata } from "../types";
 
-// Initialize Gemini
-// Note: In Vercel, process.env.API_KEY will be populated from the Environment Variables settings.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper function to initialize Gemini lazily
+// This prevents the "API Key must be set" error from crashing the app on initial load
+const getGeminiClient = () => {
+  // Check multiple common environment variable patterns to ensure compatibility with Vercel/Vite/CRA
+  // Note: For Vite apps on Vercel, use VITE_API_KEY in environment variables
+  const apiKey = process.env.API_KEY || 
+                 process.env.VITE_API_KEY || 
+                 process.env.REACT_APP_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("API Key tidak ditemukan. Mohon set VITE_API_KEY di Environment Variables Vercel.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -54,6 +65,7 @@ export const extractPosterMetadata = async (file: File): Promise<PosterMetadata>
   const base64Data = await fileToGenerativePart(file);
 
   try {
+    const ai = getGeminiClient(); // Initialize here
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
@@ -106,6 +118,7 @@ export const reanalyzeField = async (file: File, fieldLabel: string, currentVal:
   }
 
   try {
+    const ai = getGeminiClient(); // Initialize here
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: {
