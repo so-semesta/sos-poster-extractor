@@ -38,7 +38,7 @@ const getGeminiClient = () => {
 
   // 3. Fallback: Hardcoded Key (Hanya jika tidak ada di localStorage atau Env)
   if (!apiKey) {
-    apiKey = 'AIzaSyAzuhJ4bG5qKm5vZalJhhstTmQAcBtEIx4';
+    apiKey = 'AIzaSyCFSfZMKnPLCk09nwbIIkXzzURpmuDk0L0';
   }
   
   if (!apiKey) {
